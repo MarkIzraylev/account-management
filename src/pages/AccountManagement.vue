@@ -42,7 +42,7 @@ const tryToAddRow = async (): Promise<void> => {
             </tr>
           </thead>
           <tbody>
-            <AccountRow v-for="(row, ind) in store.accounts" :key="ind" :rowIndex="ind" />
+            <AccountRow v-for="(row, ind) in store.accounts" :key="row.login" :rowIndex="ind" />
           </tbody>
         </table>
       </vForm>
