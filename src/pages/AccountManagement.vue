@@ -1,30 +1,51 @@
 <script setup lang="ts">
+import { useAccountsStore } from '@/stores/accounts'
+import { provide, ref } from 'vue'
+
 import AccountRow from '@/components/AccountRow.vue'
+
+const store = useAccountsStore()
+
+const formRef = ref<HTMLFormElement | undefined>()
+provide('formRef', formRef)
+
+const tryToAddRow = async (): Promise<void> => {
+  store.addRow()
+}
 </script>
 
 <template>
   <div class="main">
     <div class="header">
       <span class="heading">Учётные записи</span>
-      <v-btn icon="mdi-plus-circle-outline" color="blue-lighten-1" variant="text"></v-btn>
+      <vBtn
+        icon="mdi-plus-circle-outline"
+        color="blue-lighten-1"
+        variant="text"
+        @click="tryToAddRow"
+      ></vBtn>
     </div>
-    <v-alert
+    <vAlert
       color="info"
       icon="$info"
       text="Для указания нескольких меток для одной пары логин/пароль, используйте разделитель ;"
-    ></v-alert>
+    ></vAlert>
     <div class="accountsWrapper">
-      <table class="accounts">
-        <thead>
-          <th>Метки</th>
-          <th>Тип записи</th>
-          <th>Логин</th>
-          <th>Пароль</th>
-        </thead>
-        <tbody>
-          <AccountRow v-for="(row, ind) in new Array(3)" :key="ind" />
-        </tbody>
-      </table>
+      <vForm ref="formRef">
+        <table class="accounts">
+          <thead>
+            <tr>
+              <th>Метки</th>
+              <th>Тип записи</th>
+              <th>Логин</th>
+              <th>Пароль</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AccountRow v-for="(row, ind) in store.accounts" :key="ind" :rowIndex="ind" />
+          </tbody>
+        </table>
+      </vForm>
     </div>
   </div>
 </template>

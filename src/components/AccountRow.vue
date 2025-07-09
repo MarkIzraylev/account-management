@@ -1,51 +1,118 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { inject, onMounted, ref, type Ref } from 'vue'
+import { useAccountsStore } from '@/stores/accounts'
 
-const password = ref()
+const store = useAccountsStore()
+
+const props = defineProps({
+  rowIndex: {
+    type: Number,
+    required: true,
+  },
+})
+
+const formRef = inject<Ref<HTMLFormElement | undefined>>('formRef')
+
+const labelsString = ref(store.getLabelsString(props.rowIndex))
+const type = ref(store.accounts[props.rowIndex].type)
+const login = ref(store.accounts[props.rowIndex].login)
+const password = ref(store.accounts[props.rowIndex].password)
 const showPassword = ref(false)
 const rules = {
-  required: (value) => !!value || 'Необходимо заполнить',
-  min: (v) => v.length >= 8 || 'Минимум 8 символов',
+  required: (value: string) => !!value || 'Необходимо заполнить',
+  maxN(n: number) {
+    return (value: string) => value.length <= 100 || `Максимум ${n} символов`
+  },
 }
+
+const isFormValid = async (): Promise<boolean> => {
+  return await formRef?.value?.validate().then((res: unknown) => {
+    return res && typeof res === 'object' && 'valid' in res && res.valid
+  })
+}
+
+const tryToSaveData = async (): Promise<boolean> => {
+  const isValid = await isFormValid()
+
+  if (isValid) {
+    store.setLabels(props.rowIndex, labelsString.value)
+    store.accounts[props.rowIndex].type = type.value
+    store.accounts[props.rowIndex].login = login.value
+    store.accounts[props.rowIndex].password = type.value === 'LDAP' ? null : password.value
+  }
+
+  return isValid
+}
+
+onMounted(async (): Promise<void> => {
+  // Добавляем только один event listener
+  if (props.rowIndex === 0) {
+    window.addEventListener('beforeunload', async (event) => {
+      const isValid = await tryToSaveData()
+      if (!isValid) {
+        event.preventDefault()
+        // Сообщаем пользователю, что есть несохранённые данные
+        event.returnValue = ''
+      }
+    })
+  }
+})
 </script>
 
 <template>
   <tr class="row">
     <td>
-      <v-textarea
+      <vTextarea
         class="control"
         label="Метки"
         rows="1"
         auto-grow
         hint="Разделитель ;"
-      ></v-textarea>
+        :rules="[rules.maxN(50)]"
+        v-model="labelsString"
+        @change="tryToSaveData"
+      />
     </td>
     <td>
-      <v-select class="control" label="Тип записи" :items="['LDAP', 'Локальная']"></v-select>
+      <vSelect
+        class="control"
+        label="Тип записи"
+        :items="['LDAP', 'Локальная']"
+        :rules="[rules.required]"
+        v-model="type"
+        @update:model-value="tryToSaveData"
+      />
     </td>
-    <td>
-      <v-text-field class="control" label="Логин"></v-text-field>
+    <td :colspan="type === 'LDAP' ? 2 : 1">
+      <vTextField
+        class="control"
+        label="Логин"
+        :rules="[rules.required, rules.maxN(100)]"
+        v-model="login"
+        @change="tryToSaveData"
+      />
     </td>
-    <td>
-      <v-text-field
+    <td v-if="type !== 'LDAP'">
+      <vTextField
         class="control"
         v-model="password"
         :append-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-        :rules="[rules.required, rules.min]"
+        :rules="[rules.required, rules.maxN(100)]"
         :type="showPassword ? 'text' : 'password'"
         label="Пароль"
-        name="input-10-1"
         counter
         @click:append="showPassword = !showPassword"
-      ></v-text-field>
+        @change="tryToSaveData"
+      />
     </td>
     <td class="buttonCell">
-      <v-btn
+      <vBtn
         density="default"
         icon="mdi-trash-can-outline"
         color="red-lighten-2"
         variant="text"
-      ></v-btn>
+        @click="store.removeRow(rowIndex)"
+      />
     </td>
   </tr>
 </template>
