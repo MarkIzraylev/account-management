@@ -9,8 +9,12 @@ const store = useAccountsStore()
 const formRef = ref<HTMLFormElement | undefined>()
 provide('formRef', formRef)
 
-const tryToAddRow = async (): Promise<void> => {
-  store.addRow()
+const accountRowRefs = ref<InstanceType<typeof AccountRow>[] | undefined>()
+
+const tryToSaveAll = (): void => {
+  accountRowRefs.value?.forEach((child) => {
+    child.tryToSaveData(true)
+  })
 }
 </script>
 
@@ -22,14 +26,17 @@ const tryToAddRow = async (): Promise<void> => {
         icon="mdi-plus-circle-outline"
         color="blue-lighten-1"
         variant="text"
-        @click="tryToAddRow"
+        @click="store.addRow()"
       ></vBtn>
     </div>
+
     <vAlert
       color="info"
       icon="$info"
-      text="Для указания нескольких меток для одной пары логин/пароль, используйте разделитель ;"
-    ></vAlert>
+      text="Для указания нескольких меток для одной пары логин/пароль используйте разделитель ;"
+      variant="flat"
+    />
+
     <div class="accountsWrapper">
       <vForm ref="formRef">
         <table class="accounts">
@@ -42,10 +49,24 @@ const tryToAddRow = async (): Promise<void> => {
             </tr>
           </thead>
           <tbody>
-            <AccountRow v-for="(row, ind) in store.accounts" :key="row.login" :rowIndex="ind" />
+            <AccountRow
+              v-for="(row, ind) in store.accounts"
+              :key="row.login + ind"
+              :rowIndex="ind"
+              ref="accountRowRefs"
+              @save="tryToSaveAll"
+            />
           </tbody>
         </table>
       </vForm>
+
+      <vEmptyState
+        v-if="!store.accounts.length"
+        class="emptyStateBanner"
+        headline="Записей пока нет"
+        text='Добавьте новую, нажав на кнопку "+".'
+        icon="mdi-cancel"
+      />
     </div>
   </div>
 </template>
@@ -95,5 +116,9 @@ const tryToAddRow = async (): Promise<void> => {
 .accounts {
   width: 100%;
   border-spacing: 24px 8px;
+}
+
+.emptyStateBanner {
+  min-height: 500px;
 }
 </style>

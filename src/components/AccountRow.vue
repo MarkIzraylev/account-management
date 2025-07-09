@@ -2,6 +2,8 @@
 import { inject, onMounted, ref, type Ref } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
 
+const emit = defineEmits(['save'])
+
 const store = useAccountsStore()
 
 const props = defineProps({
@@ -31,7 +33,7 @@ const isFormValid = async (): Promise<boolean> => {
   })
 }
 
-const tryToSaveData = async (): Promise<boolean> => {
+const tryToSaveData = async (prohibitEmits: boolean = false): Promise<boolean> => {
   const isValid = await isFormValid()
 
   if (isValid) {
@@ -39,6 +41,8 @@ const tryToSaveData = async (): Promise<boolean> => {
     store.accounts[props.rowIndex].type = type.value
     store.accounts[props.rowIndex].login = login.value
     store.accounts[props.rowIndex].password = type.value === 'LDAP' ? null : password.value
+
+    if (!prohibitEmits) emit('save', props.rowIndex)
   }
 
   return isValid
@@ -56,6 +60,10 @@ onMounted(async (): Promise<void> => {
       }
     })
   }
+})
+
+defineExpose({
+  tryToSaveData,
 })
 </script>
 
@@ -80,7 +88,7 @@ onMounted(async (): Promise<void> => {
         :items="['LDAP', 'Локальная']"
         :rules="[rules.required]"
         v-model="type"
-        @update:model-value="tryToSaveData"
+        @update:model-value="tryToSaveData()"
       />
     </td>
     <td :colspan="type === 'LDAP' ? 2 : 1">
